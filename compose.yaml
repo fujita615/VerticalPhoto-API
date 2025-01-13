@@ -1,0 +1,62 @@
+services:
+  vertical_web:
+    build:
+      context: .
+      dockerfile: ./docker/web/Dockerfile
+      # /sbin/initを実行するためprivileged（特権モード）でコンテナを立ち上げる
+    privileged: true
+    command: /sbin/init
+    ports:
+      - ${WEB_PORT}:80
+      - 5173:5173 # viteのホットリロード配信ポート
+    volumes:
+      - ./work:/work
+
+    environment:
+      - DB_CONNECTION=mysql
+      - DB_HOST=vertical_db
+      - DB_PORT=${DB_PORT}
+      - DB_DATABASE=${DB_NAME}
+      - DB_USERNAME=${DB_USER}
+      - DB_PASSWORD=${DB_PASS}
+
+  minio:
+    image: minio/minio:RELEASE.2023-08-29T23-07-35Z
+    container_name: minio
+    ports:
+      - ${MINIO_API_PORT}:9000
+      - ${MINIO_CONSOLE_PORT}:9002
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_SERVER_URL=${MINIO_SERVER_URL}
+    command: server /export --address :9000 --console-address :9002
+    volumes:
+      - ./docker/minio_data:/export
+
+  vertical_db:
+    container_name: vertical_db
+    build:
+      context: .
+      dockerfile: ./docker/db/Dockerfile
+    ports:
+      - ${DB_PORT}:3306
+    volumes:
+      - ./docker/db/mysql:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASS}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    ports:
+      - "8081:80"
+    depends_on:
+      - vertical_db
+    environment:
+      - PMA_HOSTS=vertical_db
+      - PMA_USER=${PMA_USER}
+      - PMA_PASSWORD=${PMA_PASSWORD}
+

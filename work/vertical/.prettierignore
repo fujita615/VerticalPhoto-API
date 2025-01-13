@@ -1,0 +1,9 @@
+# Ignore artifacts:
+node_modules
+strage
+.DS_Store
+
+
+ # Ignore files 
+ package-lock.json
+composer.lock
